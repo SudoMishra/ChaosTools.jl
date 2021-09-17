@@ -269,16 +269,18 @@ end
 function lyapunov(pinteg, T, Ttr, Δt, d0, ut, lt)
     # transient
     t0 = pinteg.t
+    # array to preallocate state for rescale
+    r = [get_state(pinteg,1)]
     while pinteg.t < t0 + Ttr
         step!(pinteg, Δt)
         d = λdist(pinteg)
-        lt ≤ d ≤ ut || rescale!(pinteg, d/d0)
+        lt ≤ d ≤ ut || rescale!(pinteg, d/d0, r)
     end
 
     t0 = pinteg.t
     d = λdist(pinteg)
     d == 0 && error("Initial distance between states is zero!!!")
-    rescale!(pinteg, d/d0)
+    rescale!(pinteg, d/d0, r)
     λ = zero(d)
     while pinteg.t < t0 + T
         d = λdist(pinteg)
@@ -291,7 +293,7 @@ function lyapunov(pinteg, T, Ttr, Δt, d0, ut, lt)
         # local lyapunov exponent is simply the relative distance of the trajectories
         a = d/d0
         λ += log(a)
-        rescale!(pinteg, a)
+        rescale!(pinteg, a, r)
     end
     # Do final rescale, in case no other happened
     d = λdist(pinteg)
@@ -328,10 +330,12 @@ function λdist(integ::AbstractODEIntegrator{Alg, IIP, Vector{S}}) where {Alg, I
 end
 
 # Rescales:
-function rescale!(integ,a)
-    r = get_state(integ,1) + (get_state(integ,2)-get_state(integ,1))./a
-    set_state!(integ,r,2)
+function rescale!(integ,a,r)
+    # r =[get_state(pinteg,1)] for preallocated computation  
+    r[1] = get_state(integ,1) + (get_state(integ,2)-get_state(integ,1))./a
+    set_state!(integ,r[1],2)
 end
+
 
 
 #####################################################################################
